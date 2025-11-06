@@ -71,27 +71,31 @@ def fetch_movie_details(title):
         
         # Format runtime for readability
         formatted_runtime = f"{runtime} minutes" if runtime != 'N/A' else 'N/A'
+        
+        # Results dictionary for unit test
+        results = {
+            'title': found_title,
+            'rating': formatted_rating,
+            'release_date': release_date,
+            'runtime': formatted_runtime,
+            'main_cast': cast_display,
+            'raw_runtime': runtime, # Add raw runtime for easier assertion
+            'raw_rating': rating
+            
+            }
 
-
-        # 5. DISPLAY THE RESULTS
-        print("\n========================================")
-        print(f"Movie Title: {found_title}")
-        print("========================================")
-        print(f"Rating (TMDB): {formatted_rating}")
-        print(f"Release Date:  {release_date}")
-        print(f"Runtime:       {formatted_runtime}")
-        print(f"Main Cast:     {cast_display}")
-        print("========================================\n")
-
+        return results
 
     except requests.exceptions.HTTPError as e:
         print(f"An HTTP error occurred: {e}")
         print("Tip: Did you include a valid TMDB API key?")
+        return None
     except requests.exceptions.RequestException as e:
         print(f"An error occurred during the API request: {e}")
+        return None
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-
+        return None
 
 # --- Main entry point for command-line execution ---
 if __name__ == "__main__":
@@ -99,6 +103,22 @@ if __name__ == "__main__":
     user_input = input("Enter a movie title: ")
     
     # 2. Call the function with the user's input
-    fetch_movie_details(user_input)
-
+    data = fetch_movie_details(user_input)
+    
+    
+    # 3. DISPLAY THE RESULTS - results will only be printed if this
+    # file is run directly
+    if data:
+        print("\n========================================")
+        print(f"Movie Title: {data['title']}")
+        print("========================================")
+        print(f"Rating (TMDB): {data['rating']}")
+        print(f"Release Date:  {data['release_date']}")
+        print(f"Runtime:       {data['runtime']}")
+        print(f"Main Cast:     {data['main_cast']}")
+        print("========================================\n")
+        
+    elif user_input:
+        print(f"\n--- Searching for: {user_input} ---")
+        print("Error: Could not retrieve movie details or no movie found.")
 
