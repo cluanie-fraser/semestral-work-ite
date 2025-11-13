@@ -22,11 +22,13 @@ def fetch_movie_details(title):
         "api_key": API_KEY,
         "query": title
     }
-
+    # try makes error handling easy: if code fails -> except block
     try:
-        # Perform the search request
+        # Perform the search request with requests library
         search_response = requests.get(search_url, params=search_params)
-        search_response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        #Raise exception if request fails
+        search_response.raise_for_status()
+        #parses and converts json response into python dict
         search_data = search_response.json()
 
         # Check if any results were found
@@ -39,7 +41,9 @@ def fetch_movie_details(title):
         found_title = search_data['results'][0]['title']
         print(f"Found movie ID: {movie_id} ({found_title})")
 
-
+        #could implement functionality here for user to confirm if
+        #movie title is correct, if not find 2nd result and confirm again
+        
         # 2. FETCH DETAILED MOVIE INFORMATION (Rating, Runtime, Release Date)
         details_url = f"{BASE_URL}/movie/{movie_id}"
         details_params = {
