@@ -33,8 +33,25 @@ API_KEY = "YOUR_API_KEY_HERE"  # <-- Update this line
 BASE_URL = "[https://api.themoviedb.org/3](https://api.themoviedb.org/3)"
 ```
 
-### Test.md
+
+### Testing
+Test_main is the main test file for the program. 
+It is accessed here: https://github.com/cluanie-fraser/semestral-work-ite/blob/v1.0.0/test_main.py
+
+to run the test file, run the following command in bash:
+
+python test_main.py
+
+
+
+
+
+## Test.md
 The file `test.md` describes the testing approach and mindset
+
+
+
+
 
 
 ### Known Issues
