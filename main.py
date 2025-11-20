@@ -1,5 +1,3 @@
-
-
 import requests
 
 # --- Configuration ---
@@ -7,89 +5,32 @@ import requests
 API_KEY = "77dbe92dcb0fe1ff2c8aa82f7b391e19" 
 BASE_URL = "https://api.themoviedb.org/3"
 
-def fetch_movie_details(title):
+def fetch_search_results(title):
     """
-    Fetches and displays details for a given movie title from TMDB.
+    Performs the initial search query and returns the raw JSON data.
 
     :param title: The title of the movie to search for (string).
+    :return: The full search results dictionary or None on error.
     """
-
     print(f"\n--- Searching for: {title} ---")
-
-    # 1. SEARCH FOR THE MOVIE TITLE to get the movie ID
     search_url = f"{BASE_URL}/search/movie"
     search_params = {
         "api_key": API_KEY,
         "query": title
     }
-    # try makes error handling easy: if code fails -> except block
+    
     try:
-        # Perform the search request with requests library
         search_response = requests.get(search_url, params=search_params)
-        #Raise exception if request fails
         search_response.raise_for_status()
-        #parses and converts json response into python dict
         search_data = search_response.json()
 
-        # Check if any results were found
         if not search_data.get('results'):
-            print("Error: No movie found with that title. Try again")
-            return
-
-        # Use the first result (most relevant)
-        movie_id = search_data['results'][0]['id']
-        found_title = search_data['results'][0]['title']
-        print(f"Found movie ID: {movie_id} ({found_title})")
-
-        #could implement functionality here for user to confirm if
-        #movie title is correct, if not find 2nd result and confirm again
+            print("Error: No movie found with that title.")
+            return None
         
-        # 2. FETCH DETAILED MOVIE INFORMATION (Rating, Runtime, Release Date)
-        details_url = f"{BASE_URL}/movie/{movie_id}"
-        details_params = {
-            "api_key": API_KEY,
-        }
-        details_response = requests.get(details_url, params=details_params)
-        details_response.raise_for_status()
-        details = details_response.json()
-
-        # 3. FETCH CAST INFORMATION (Credits)
-        credits_url = f"{BASE_URL}/movie/{movie_id}/credits"
-        credits_response = requests.get(credits_url, params=details_params) # Reusing details_params
-        credits_response.raise_for_status()
-        credits = credits_response.json()
-
-        # 4. EXTRACT AND FORMAT DATA
-        
-        # Get up to the first 5 cast members
-        cast_list = [member['name'] for member in credits.get('cast', [])[:5]]
-        cast_display = ", ".join(cast_list) if cast_list else "N/A"
-
-        # Extract basic details
-        rating = details.get('vote_average', 'N/A')
-        release_date = details.get('release_date', 'N/A')
-        runtime = details.get('runtime', 'N/A') # Runtime is in minutes
-        
-        # Convert rating to a nice format (out of 10)
-        formatted_rating = f"{rating:.1f}/10" if isinstance(rating, float) else rating
-        
-        # Format runtime for readability
-        formatted_runtime = f"{runtime} minutes" if runtime != 'N/A' else 'N/A'
-        
-        # Results dictionary for unit test
-        results = {
-            'title': found_title,
-            'rating': formatted_rating,
-            'release_date': release_date,
-            'runtime': formatted_runtime,
-            'main_cast': cast_display,
-            'raw_runtime': runtime, # Add raw runtime for easier assertion
-            'raw_rating': rating
-            
-            }
-
-        return results
-
+        return search_data
+    
+    # if new user forgets to include their own API key:
     except requests.exceptions.HTTPError as e:
         print(f"An HTTP error occurred: {e}")
         print("Tip: Did you include a valid TMDB API key?")
@@ -101,17 +42,78 @@ def fetch_movie_details(title):
         print(f"An unexpected error occurred: {e}")
         return None
 
-# --- Main entry point for command-line execution ---
-if __name__ == "__main__":
-    # 1. Prompt the user for a movie title
-    user_input = input("Enter a movie title: ")
-    
-    # 2. Call the function with the user's input
-    data = fetch_movie_details(user_input)
-    
-    
-    # 3. DISPLAY THE RESULTS - results will only be printed if this
-    # file is run directly
+def fetch_details_by_index(search_data, index):
+    """
+    Fetches detailed info and cast for a movie based on its index in the search results.
+
+    :param search_data: The full search results dictionary.
+    :param index: The index (0 for first, 1 for second, etc.) of the movie to fetch.
+    :return: A formatted results dictionary or None on error.
+    """
+    try:
+        # Check if the requested index exists in the results list
+        if index >= len(search_data['results']):
+            print(f"Error: No movie found at index {index} in the search results.")
+            return None
+
+        # Extract the necessary data for the selected movie
+        selected_movie = search_data['results'][index]
+        movie_id = selected_movie['id']
+        found_title = selected_movie['title']
+        print(f"Found movie ID: {movie_id} (Result #{index + 1}: {found_title})")
+
+        # 1. FETCH DETAILED MOVIE INFORMATION (Rating, Runtime, Release Date)
+        details_url = f"{BASE_URL}/movie/{movie_id}"
+        details_params = {
+            "api_key": API_KEY,
+        }
+        details_response = requests.get(details_url, params=details_params)
+        details_response.raise_for_status()
+        details = details_response.json()
+
+        # 2. FETCH CAST INFORMATION (Credits)
+        credits_url = f"{BASE_URL}/movie/{movie_id}/credits"
+        credits_response = requests.get(credits_url, params=details_params)
+        credits_response.raise_for_status()
+        credits = credits_response.json()
+
+        # 3. EXTRACT AND FORMAT DATA
+        cast_list = [member['name'] for member in credits.get('cast', [])[:5]]
+        cast_display = ", ".join(cast_list) if cast_list else "N/A"
+
+        rating = details.get('vote_average', 'N/A')
+        release_date = details.get('release_date', 'N/A')
+        runtime = details.get('runtime', 'N/A') 
+        
+        formatted_rating = f"{rating:.1f}/10" if isinstance(rating, float) else rating
+        formatted_runtime = f"{runtime} minutes" if runtime != 'N/A' else 'N/A'
+        
+        results = {
+            'title': found_title,
+            'rating': formatted_rating,
+            'release_date': release_date,
+            'runtime': formatted_runtime,
+            'main_cast': cast_display,
+            # Used by unit tests but not displayed to user:
+            'raw_runtime': runtime, 
+            'raw_rating': rating
+            }
+
+        return results
+
+    except requests.exceptions.HTTPError as e:
+        print(f"An HTTP error occurred while fetching details: {e}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred during the details request: {e}")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
+
+
+def display_results(data):
+    """Prints the formatted movie details to the console."""
     if data:
         print("\n========================================")
         print(f"Movie Title: {data['title']}")
@@ -121,8 +123,46 @@ if __name__ == "__main__":
         print(f"Runtime:       {data['runtime']}")
         print(f"Main Cast:     {data['main_cast']}")
         print("========================================\n")
-        
-    elif user_input:
-        print(f"\n--- Searching for: {user_input} ---")
-        print("Error: Could not retrieve movie details or no movie found.")
+        return True
+    return False
 
+
+# --- Main entry point for command-line execution ---
+if __name__ == "__main__":
+    # 1. Prompt the user for a movie title
+    user_input = input("Enter a movie title: ")
+    
+    # 2. Perform the initial search
+    search_results = fetch_search_results(user_input)
+    
+    if search_results:
+        current_index = 0
+        
+        # Loop to allow user to retry if the first movie is incorrect
+        while current_index < len(search_results['results']):
+            
+            # Fetch and format details for the movie at the current index
+            movie_details = fetch_details_by_index(search_results, current_index)
+            
+            # Display the results
+            if display_results(movie_details):
+                # Now ask the user if they want to retry
+                prompt = input(f"Is '{movie_details['title']}' correct? Type 'retry' for the next suggestion or press Enter to exit: ").strip().lower()
+                
+                if prompt == "retry":
+                    # Move to the next movie result
+                    current_index += 1
+                    # Check if we ran out of results
+                    if current_index >= len(search_results['results']):
+                        print("No more search results available.")
+                        break # Exit the loop
+                else:
+                    # User accepted the movie or pressed Enter to quit
+                    break # Exit the loop
+            else:
+                # If fetching details failed for the current index, exit the loop
+                break
+            
+    else:
+        print(f"\n--- Searching for: {user_input} ---")
+        print("Operation failed or no search results were retrieved.")
